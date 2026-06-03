@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ТОТ Checker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,400&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsrsasign/10.9.0/jsrsasign-all-min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--sage:#7a9e8e;--sage-l:#b8d4c8;--sage-d:#4a6e5e;--blush:#d4a8b0;--blush-l:#eddde0;--warm:#fdfaf7;--ink:#2a2a2a;--ink-s:#5a5a5a;--ink-m:#9a9a9a;--border:rgba(122,158,142,0.2);--sh:0 8px 40px rgba(74,110,94,0.10);--sh-lg:0 20px 60px rgba(74,110,94,0.15)}
+html{scroll-behavior:smooth}
+body{font-family:'Jost',sans-serif;background:var(--warm);color:var(--ink);min-height:100vh}
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 80% 60% at 20% 10%,rgba(184,212,200,0.18) 0%,transparent 60%),radial-gradient(ellipse 60% 80% at 80% 90%,rgba(212,168,176,0.12) 0%,transparent 60%);pointer-events:none;z-index:0}
+.page{position:relative;z-index:1;max-width:820px;margin:0 auto;padding:56px 32px 80px}
+header{text-align:center;margin-bottom:48px;animation:fadeUp .8s ease both}
+.dots{display:flex;justify-content:center;gap:8px;margin-bottom:16px}
+.dot{width:9px;height:9px;border-radius:50%;animation:pulse 3s ease-in-out infinite}
+.dot:nth-child(1){background:var(--sage)}.dot:nth-child(2){background:var(--blush);animation-delay:1s}.dot:nth-child(3){background:var(--sage-l);animation-delay:2s}
+@keyframes pulse{0%,100%{transform:scale(1);opacity:.7}50%{transform:scale(1.4);opacity:1}}
+h1{font-family:'Cormorant Garamond',serif;font-weight:300;font-size:clamp(2rem,5vw,2.8rem);letter-spacing:.02em}
+h1 em{font-style:italic;color:var(--sage-d)}
+.subtitle{margin-top:8px;font-size:.8rem;font-weight:300;color:var(--ink-m);letter-spacing:.1em;text-transform:uppercase}
+.card{background:rgba(253,250,247,.88);backdrop-filter:blur(12px);border:1px solid var(--border);border-radius:20px;padding:36px;box-shadow:var(--sh);transition:box-shadow .3s;margin-bottom:20px;animation:fadeUp .8s ease .1s both}
+.card:hover{box-shadow:var(--sh-lg)}
+.settings-toggle{display:flex;align-items:center;gap:10px;cursor:pointer;padding:10px 0;border:none;background:none;font-family:'Jost',sans-serif;font-size:.8rem;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-m);transition:color .2s}
+.settings-toggle:hover{color:var(--sage-d)}
+.settings-toggle .chev{transition:transform .3s}
+.settings-toggle.open .chev{transform:rotate(180deg)}
+.settings-panel{display:none;padding-top:20px;border-top:1px solid var(--border);margin-top:12px}
+.settings-panel.open{display:block}
+.field{margin-bottom:16px}
+.field label{display:block;font-size:.72rem;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-m);margin-bottom:6px}
+.field input,.field textarea{width:100%;padding:10px 14px;background:rgba(184,212,200,0.06);border:1px solid var(--border);border-radius:10px;font-family:'Jost',sans-serif;font-size:.85rem;color:var(--ink);transition:border-color .2s,box-shadow .2s;outline:none;resize:vertical}
+.field input:focus,.field textarea:focus{border-color:var(--sage);box-shadow:0 0 0 3px rgba(122,158,142,.12)}
+.field textarea{min-height:90px;font-size:.72rem;font-family:monospace}
+.field-hint{font-size:.7rem;color:var(--ink-m);margin-top:4px}
+.btn-save{padding:10px 24px;background:var(--sage-d);color:white;border:none;border-radius:10px;font-family:'Jost',sans-serif;font-size:.8rem;font-weight:500;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;transition:all .2s}
+.btn-save:hover{background:var(--sage);transform:translateY(-1px)}
+.saved-badge{display:none;align-items:center;gap:6px;font-size:.75rem;color:var(--sage-d);margin-left:12px}
+.saved-badge.show{display:inline-flex}
+.upload-zone{border:2px dashed var(--sage-l);border-radius:14px;padding:44px 32px;text-align:center;cursor:pointer;transition:all .3s;background:rgba(184,212,200,.04);position:relative;overflow:hidden}
+.upload-zone::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at center,rgba(184,212,200,.1) 0%,transparent 70%);opacity:0;transition:opacity .3s}
+.upload-zone:hover,.upload-zone.drag{border-color:var(--sage);background:rgba(184,212,200,.08)}
+.upload-zone:hover::before,.upload-zone.drag::before{opacity:1}
+.upload-zone.drag{transform:scale(1.01)}
+.up-icon{width:52px;height:52px;margin:0 auto 14px;background:linear-gradient(135deg,var(--sage-l),var(--blush-l));border-radius:50%;display:flex;align-items:center;justify-content:center;transition:transform .3s}
+.upload-zone:hover .up-icon{transform:translateY(-3px)}
+.up-title{font-family:'Cormorant Garamond',serif;font-size:1.25rem;margin-bottom:5px}
+.up-hint{font-size:.78rem;color:var(--ink-m)}
+.up-badges{display:flex;gap:7px;justify-content:center;margin-top:10px}
+.badge{font-size:.68rem;font-weight:500;letter-spacing:.06em;text-transform:uppercase;padding:3px 10px;border-radius:20px;background:rgba(122,158,142,.1);color:var(--sage-d);border:1px solid rgba(122,158,142,.2)}
+input[type=file]{display:none}
+.file-preview{display:none;align-items:center;gap:12px;padding:14px 18px;background:rgba(184,212,200,.1);border:1px solid var(--border);border-radius:12px;margin-top:14px}
+.file-preview.show{display:flex}
+.f-icon{width:38px;height:38px;background:linear-gradient(135deg,var(--sage),var(--sage-d));border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.f-name{font-size:.85rem;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.f-size{font-size:.72rem;color:var(--ink-m);margin-top:2px}
+.f-remove{background:none;border:none;cursor:pointer;color:var(--ink-m);padding:4px;border-radius:6px;transition:all .2s;display:flex;margin-left:auto;flex-shrink:0}
+.f-remove:hover{color:var(--blush);background:rgba(212,168,176,.1)}
+.progress-wrap{margin-top:16px;display:none}
+.progress-wrap.show{display:block}
+.progress-bar{height:4px;background:rgba(122,158,142,.15);border-radius:2px;overflow:hidden;margin-bottom:8px}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--sage-d),var(--sage));border-radius:2px;transition:width .4s ease;width:0%}
+.progress-text{font-size:.72rem;color:var(--ink-m);text-align:center}
+.btn-process{width:100%;margin-top:18px;padding:15px 32px;background:linear-gradient(135deg,var(--sage-d),var(--sage));color:white;border:none;border-radius:12px;font-family:'Jost',sans-serif;font-size:.88rem;font-weight:500;letter-spacing:.07em;text-transform:uppercase;cursor:pointer;transition:all .3s;position:relative;overflow:hidden}
+.btn-process:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 8px 24px rgba(74,110,94,.3)}
+.btn-process:disabled{opacity:.55;cursor:not-allowed}
+.btn-process.loading{color:transparent}
+.btn-process.loading::after{content:'';position:absolute;width:18px;height:18px;border:2px solid rgba(255,255,255,.3);border-top-color:white;border-radius:50%;top:50%;left:50%;transform:translate(-50%,-50%);animation:spin .8s linear infinite}
+@keyframes spin{to{transform:translate(-50%,-50%) rotate(360deg)}}
+.divider{display:flex;align-items:center;gap:14px;margin:28px 0 22px}
+.divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--border)}
+.divider span{font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-m)}
+#results{display:none;animation:fadeUp .5s ease both}
+.res-head{display:flex;align-items:center;gap:12px;margin-bottom:20px}
+.res-ic{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.res-ic.ok{background:rgba(122,158,142,.14)}.res-ic.err{background:rgba(212,168,176,.2)}
+.res-title{font-family:'Cormorant Garamond',serif;font-size:1.35rem}
+.res-meta{font-size:.75rem;color:var(--ink-m);margin-top:2px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:22px}
+.stat{padding:16px 12px;border-radius:12px;text-align:center}
+.stat.new{background:rgba(122,158,142,.08);border:1px solid rgba(122,158,142,.18)}
+.stat.rem{background:rgba(212,168,176,.1);border:1px solid rgba(212,168,176,.2)}
+.stat.info{background:rgba(154,154,154,.06);border:1px solid rgba(154,154,154,.14)}
+.stat-n{font-family:'Cormorant Garamond',serif;font-size:2.2rem;font-weight:600;line-height:1;margin-bottom:3px}
+.stat.new .stat-n{color:var(--sage-d)}.stat.rem .stat-n{color:var(--blush)}.stat.info .stat-n{color:var(--ink-m)}
+.stat-l{font-size:.68rem;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-m)}
+.sec-title{font-size:.68rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-s);margin:16px 0 8px;display:flex;align-items:center;gap:8px}
+.sec-title::after{content:'';flex:1;height:1px;background:var(--border)}
+.items{list-style:none;display:flex;flex-direction:column;gap:5px;margin-bottom:8px}
+.item{display:flex;align-items:flex-start;gap:8px;padding:8px 12px;border-radius:9px;font-size:.8rem;animation:fadeUp .4s ease both}
+.item.ni{background:rgba(122,158,142,.07);border:1px solid rgba(122,158,142,.14)}
+.item.ri{background:rgba(212,168,176,.08);border:1px solid rgba(212,168,176,.16)}
+.i-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0;margin-top:5px}
+.ni .i-dot{background:var(--sage)}.ri .i-dot{background:var(--blush)}
+.i-code{font-size:.68rem;font-weight:500;color:var(--ink-m);white-space:nowrap;flex-shrink:0}
+.i-name{color:var(--ink);flex:1}
+.i-date{font-size:.68rem;color:var(--ink-m);white-space:nowrap;padding-left:6px}
+.empty-note{font-size:.78rem;color:var(--ink-m);font-style:italic;padding:6px 12px}
+.err-box{padding:14px 18px;background:rgba(212,168,176,.1);border:1px solid rgba(212,168,176,.3);border-radius:10px;font-size:.83rem;color:#6a3a42;line-height:1.6;white-space:pre-wrap}
+footer{text-align:center;margin-top:40px;animation:fadeUp .8s ease .3s both}
+.footer-text{font-size:.72rem;color:var(--ink-m);font-weight:300;letter-spacing:.06em}
+.footer-link{color:var(--sage);text-decoration:none}
+.footer-link:hover{color:var(--sage-d)}
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-thumb{background:var(--sage-l);border-radius:3px}
+@media(max-width:560px){.page{padding:36px 18px 60px}.card{padding:24px 18px}}
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+    <h1>ТОТ <em>Checker</em></h1>
+    <p class="subtitle">Актуалізація переліку окупованих територій</p>
+  </header>
+
+  <div class="card">
+    <button class="settings-toggle" id="settingsToggle">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+      Налаштування
+      <svg class="chev" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
+    </button>
+    <div class="settings-panel" id="settingsPanel">
+      <div class="field">
+        <label>ID Google Таблиці</label>
+        <input type="text" id="spreadsheetId" placeholder="1OSXJvlLcFkiTOEe9Fhg6Qvy3AD0Ucp7lCLsofNjM9gE">
+        <div class="field-hint">З URL: docs.google.com/spreadsheets/d/<b>ID</b>/edit</div>
+      </div>
+      <div class="field">
+        <label>Назва аркуша</label>
+        <input type="text" id="sheetName" placeholder="30.04.2025">
+        <div class="field-hint">Аркуш де колонка F = "Є тимчасово окупованим"</div>
+      </div>
+      <div class="field">
+        <label>Service Account JSON</label>
+        <textarea id="saJson" placeholder='{"type":"service_account","project_id":"...","private_key":"...","client_email":"..."}'></textarea>
+      </div>
+      <div style="display:flex;align-items:center">
+        <button class="btn-save" id="btnSave">Зберегти</button>
+        <span class="saved-badge" id="savedBadge">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>Збережено
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="upload-zone" id="uploadZone">
+      <input type="file" id="fileInput" accept=".htm,.html">
+      <div class="up-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#4a6e5e" stroke-width="1.5"><path d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M12 12V4M8 8l4-4 4 4"/></svg>
+      </div>
+      <p class="up-title">Завантажте наказ</p>
+      <p class="up-hint">HTM файл з zakon.rada.gov.ua</p>
+      <div class="up-badges"><span class="badge">HTM</span><span class="badge">HTML</span></div>
+    </div>
+    <div class="file-preview" id="filePreview">
+      <div class="f-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg></div>
+      <div style="flex:1;min-width:0"><div class="f-name" id="fileName">—</div><div class="f-size" id="fileSize">—</div></div>
+      <button class="f-remove" id="fileRemove"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+    </div>
+    <div class="progress-wrap" id="progressWrap">
+      <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+      <div class="progress-text" id="progressText">Обробка...</div>
+    </div>
+    <button class="btn-process" id="btnProcess" disabled>Обробити наказ</button>
+    <div class="divider" id="divider" style="display:none"><span>Результат</span></div>
+    <div id="results"></div>
+  </div>
+
+  <footer>
+    <p class="footer-text">
+      <a href="https://zakon.rada.gov.ua/laws/show/z0380-25" target="_blank" class="footer-link">zakon.rada.gov.ua</a>
+      &nbsp;·&nbsp;
+      <a href="https://docs.google.com/spreadsheets/d/1OSXJvlLcFkiTOEe9Fhg6Qvy3AD0Ucp7lCLsofNjM9gE" target="_blank" class="footer-link">Google Таблиця</a>
+    </p>
+  </footer>
+</div>
+
+<script>
+// CONFIG
+const CFG={save(d){try{localStorage.setItem('tot_cfg3',JSON.stringify(d))}catch(e){}},load(){try{return JSON.parse(localStorage.getItem('tot_cfg3')||'{}')}catch(e){return {}}}};
+(function init(){const c=CFG.load();if(c.spreadsheetId)document.getElementById('spreadsheetId').value=c.spreadsheetId;if(c.sheetName)document.getElementById('sheetName').value=c.sheetName;if(c.saJson)document.getElementById('saJson').value=c.saJson;if(!c.spreadsheetId||!c.saJson){document.getElementById('settingsPanel').classList.add('open');document.getElementById('settingsToggle').classList.add('open')}})();
+document.getElementById('settingsToggle').addEventListener('click',function(){this.classList.toggle('open');document.getElementById('settingsPanel').classList.toggle('open')});
+document.getElementById('btnSave').addEventListener('click',function(){CFG.save({spreadsheetId:document.getElementById('spreadsheetId').value.trim(),sheetName:document.getElementById('sheetName').value.trim(),saJson:document.getElementById('saJson').value.trim()});const b=document.getElementById('savedBadge');b.classList.add('show');setTimeout(()=>b.classList.remove('show'),2500);document.getElementById('settingsPanel').classList.remove('open');document.getElementById('settingsToggle').classList.remove('open')});
+
+// FILE UPLOAD
+let selectedFile=null;
+const uploadZone=document.getElementById('uploadZone'),fileInput=document.getElementById('fileInput');
+const fmt=b=>b<1048576?(b/1024).toFixed(1)+' KB':(b/1048576).toFixed(1)+' MB';
+function setFile(f){if(!f)return;selectedFile=f;document.getElementById('fileName').textContent=f.name;document.getElementById('fileSize').textContent=fmt(f.size);document.getElementById('filePreview').classList.add('show');document.getElementById('btnProcess').disabled=false;hideResults()}
+function clearFile(){selectedFile=null;fileInput.value='';document.getElementById('filePreview').classList.remove('show');document.getElementById('btnProcess').disabled=true;hideResults()}
+function hideResults(){document.getElementById('results').style.display='none';document.getElementById('divider').style.display='none';document.getElementById('results').innerHTML='';document.getElementById('progressWrap').classList.remove('show')}
+function setProgress(pct,text){document.getElementById('progressWrap').classList.add('show');document.getElementById('progressFill').style.width=pct+'%';document.getElementById('progressText').textContent=text}
+uploadZone.addEventListener('click',()=>fileInput.click());
+fileInput.addEventListener('change',e=>setFile(e.target.files[0]));
+document.getElementById('fileRemove').addEventListener('click',e=>{e.stopPropagation();clearFile()});
+uploadZone.addEventListener('dragover',e=>{e.preventDefault();uploadZone.classList.add('drag')});
+uploadZone.addEventListener('dragleave',()=>uploadZone.classList.remove('drag'));
+uploadZone.addEventListener('drop',e=>{e.preventDefault();uploadZone.classList.remove('drag');setFile(e.dataTransfer.files[0])});
+
+// HTM PARSER — лінійний обхід DOM у порядку документа
+function parseHTM(htmlText){
+  const doc=new DOMParser().parseFromString(htmlText,'text/html');
+  const KRE=/^UA\d{17}$/;
+  const newOcc=[],deocc=[],seenN=new Set(),seenD=new Set();
+  let sec=null,act=null;
+  const usedTbl=new WeakSet();
+
+  function procTbl(tbl){
+    if(usedTbl.has(tbl))return;
+    usedTbl.add(tbl);
+    if(sec!=='II'||!act)return;
+    tbl.querySelectorAll('tr').forEach(row=>{
+      const cells=Array.from(row.querySelectorAll('td,th')).map(c=>c.textContent.trim());
+      if(cells.length<3)return;
+      const k=cells[0].trim(),nm=cells[1].trim(),d1=cells[2].trim(),d2=(cells[3]||'').trim();
+      if(!KRE.test(k)||!d1)return;
+      if(!d2||d2==='\u00a0'){
+        if(!seenN.has(k)){seenN.add(k);newOcc.push({katottg:k,name:nm,date_start:d1})}
+      } else {
+        if(!seenD.has(k)){seenD.add(k);deocc.push({katottg:k,name:nm,date_end:d2})}
+      }
+    });
+  }
+
+  // Лінійний обхід: перевіряємо всі елементи по порядку
+  const allEls=Array.from((doc.body||doc.documentElement).querySelectorAll('*'));
+  for(const el of allEls){
+    const tag=el.tagName.toLowerCase();
+    if(tag==='table'){procTbl(el);continue}
+    // Тільки «листові» вузли без дочірніх таблиць
+    if(el.querySelector('table'))continue;
+    const t=el.textContent.trim();
+    if(!t)continue;
+    if(/розділу?\s+II\b/i.test(t))sec='II';
+    else if(/розділу?\s+I\b/i.test(t)&&!/II/.test(t))sec='I';
+    if(/доповнити/i.test(t))act='add';
+    else if(/викласти в такій редакції/i.test(t))act='update';
+  }
+  return{newOcc,deocc};
+}
+
+// GOOGLE JWT
+async function getToken(saJson){
+  const sa=typeof saJson==='string'?JSON.parse(saJson):saJson;
+  const now=Math.floor(Date.now()/1000);
+  const hdr={alg:'RS256',typ:'JWT'};
+  const clm={iss:sa.client_email,scope:'https://www.googleapis.com/auth/spreadsheets',aud:'https://oauth2.googleapis.com/token',exp:now+3600,iat:now};
+  const enc=s=>btoa(unescape(encodeURIComponent(typeof s==='string'?s:JSON.stringify(s)))).replace(/=/g,'').replace(/\+/g,'-').replace(/\//g,'_');
+  const input=enc(JSON.stringify(hdr))+'.'+enc(JSON.stringify(clm));
+  const sig=new KJUR.crypto.Signature({alg:'SHA256withRSA'});
+  sig.init(sa.private_key);sig.updateString(input);
+  const jwt=input+'.'+hex2b64(sig.sign()).replace(/=/g,'').replace(/\+/g,'-').replace(/\//g,'_');
+  const r=await fetch('https://oauth2.googleapis.com/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:`grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer&assertion=${jwt}`});
+  const d=await r.json();
+  if(!d.access_token)throw new Error('Помилка авторизації Google:\n'+JSON.stringify(d,null,2));
+  return d.access_token;
+}
+
+// SHEETS API
+const BASE=id=>`https://sheets.googleapis.com/v4/spreadsheets/${id}`;
+async function getRows(tok,id,sheet){
+  const r=await fetch(`${BASE(id)}/values/${encodeURIComponent(sheet+'!A:Y')}`,{headers:{Authorization:'Bearer '+tok}});
+  const d=await r.json();
+  if(d.error)throw new Error('Sheets API: '+d.error.message);
+  return d.values||[];
+}
+async function batchUpdateCells(tok,id,updates){
+  const data=updates.flatMap(u=>[
+    {range:u.range,values:[[u.value]]},
+    {range:u.dateRange,values:[[u.date]]}
+  ]);
+  const r=await fetch(`${BASE(id)}/values:batchUpdate`,{
+    method:'POST',
+    headers:{Authorization:'Bearer '+tok,'Content-Type':'application/json'},
+    body:JSON.stringify({valueInputOption:'RAW',data})
+  });
+  const d=await r.json();
+  if(d.error)throw new Error('Sheets batchUpdate: '+d.error.message);
+  return d;
+}
+
+// MAIN PROCESS
+// C=2 КАТОТТГ пункту, D=3 громади, F=5 статус, Q=16 громади, U=20 району, Y=24 обл., J=9 назва
+async function processChanges(tok,changes,spreadsheetId,sheetName){
+  setProgress(20,'Читання таблиці...');
+  const rows=await getRows(tok,spreadsheetId,sheetName);
+  const stripUA=s=>s.replace(/^UA/i,'');
+  const setT=new Set(changes.newOcc.map(x=>stripUA(x.katottg)));
+  const setF=new Set(changes.deocc.map(x=>stripUA(x.katottg)));
+  setProgress(40,'Аналіз '+rows.length+' рядків...');
+  const updates=[],changedT=[],changedF=[];
+  for(let i=1;i<rows.length;i++){
+    const row=rows[i];
+    const su=s=>(s||'').trim().replace(/^UA/i,'');
+    const C=su(row[2]),D=su(row[3]),F=(row[5]||'').trim();
+    const Q=su(row[16]),U=su(row[20]),Y=su(row[24]);
+    const J=(row[9]||C).trim();
+    const rowNum=i+1;
+    const needT=setT.has(C)||setT.has(D)||setT.has(Q)||setT.has(U)||setT.has(Y);
+    const needF=setF.has(C)||setF.has(D)||setF.has(Q)||setF.has(U)||setF.has(Y);
+    const today=new Date().toLocaleDateString('uk-UA',{day:'2-digit',month:'2-digit',year:'numeric'});
+    if(needT&&F!=='true'){
+      updates.push({range:`${sheetName}!F${rowNum}`,value:'true',dateRange:`${sheetName}!AD${rowNum}`,date:today});
+      changedT.push({name:J,katottg:C});
+    } else if(needF&&!needT&&F!=='false'){
+      updates.push({range:`${sheetName}!F${rowNum}`,value:'false',dateRange:`${sheetName}!AD${rowNum}`,date:today});
+      changedF.push({name:J,katottg:C});
+    }
+  }
+  setProgress(65,'Знайдено змін: '+updates.length+'. Оновлення...');
+  if(updates.length>0){
+    const BATCH=500;
+    for(let i=0;i<updates.length;i+=BATCH){
+      await batchUpdateCells(tok,spreadsheetId,updates.slice(i,i+BATCH));
+      setProgress(65+Math.round(((i+BATCH)/updates.length)*30),'Оновлено '+Math.min(i+BATCH,updates.length)+' / '+updates.length+'...');
+    }
+  }
+  setProgress(100,'Готово!');
+  return{changedT,changedF,total:updates.length,parsedNew:changes.newOcc,parsedDeocc:changes.deocc};
+}
+
+// BUTTON
+document.getElementById('btnProcess').addEventListener('click',async function(){
+  if(!selectedFile)return;
+  const cfg=CFG.load();
+  if(!cfg.spreadsheetId){showError('Вкажіть ID таблиці в налаштуваннях');return}
+  if(!cfg.sheetName){showError('Вкажіть назву аркуша в налаштуваннях');return}
+  if(!cfg.saJson){showError('Вкажіть Service Account JSON в налаштуваннях');return}
+  this.disabled=true;this.classList.add('loading');
+  hideResults();
+  try{
+    setProgress(5,'Читання файлу...');
+    const text=await selectedFile.text();
+    setProgress(10,'Парсинг наказу...');
+    const changes=parseHTM(text);
+    if(changes.newOcc.length===0&&changes.deocc.length===0){
+      showError('У файлі не знайдено змін у Розділі II (ТОТ).\n\nПеревірте що завантажено правильний HTM файл наказу.');
+      return;
+    }
+    setProgress(15,'Авторизація Google...');
+    const tok=await getToken(cfg.saJson);
+    const result=await processChanges(tok,changes,cfg.spreadsheetId,cfg.sheetName);
+    showResults(result,selectedFile.name);
+  }catch(e){
+    showError(e.message||String(e));
+  }finally{
+    this.disabled=false;this.classList.remove('loading');
+    setTimeout(()=>document.getElementById('progressWrap').classList.remove('show'),2000);
+  }
+});
+
+// RENDER
+function itemsHTML(items,cls){
+  if(!items.length)return'<p class="empty-note">Немає</p>';
+  return items.slice(0,30).map((i,idx)=>`<li class="item ${cls}" style="animation-delay:${idx*.03}s"><div class="i-dot"></div><span class="i-code">${i.katottg||''}</span><span class="i-name">${i.name||''}</span><span class="i-date">${i.date_start||i.date_end||''}</span></li>`).join('')+(items.length>30?`<p class="empty-note">...і ще ${items.length-30}</p>`:'');
+}
+function showResults(result,filename){
+  document.getElementById('divider').style.display='flex';
+  const el=document.getElementById('results');
+  el.style.display='block';
+  el.innerHTML=`
+    <div class="res-head">
+      <div class="res-ic ok"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4a6e5e" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg></div>
+      <div><div class="res-title">Готово</div><div class="res-meta">${filename} · оновлено ${result.total} рядків</div></div>
+    </div>
+    <div class="stats">
+      <div class="stat new"><div class="stat-n">${result.changedT.length}</div><div class="stat-l">→ true</div></div>
+      <div class="stat rem"><div class="stat-n">${result.changedF.length}</div><div class="stat-l">→ false</div></div>
+      <div class="stat info"><div class="stat-n">${result.parsedNew.length+result.parsedDeocc.length}</div><div class="stat-l">Кодів у наказі</div></div>
+    </div>
+    <p class="sec-title">Знайдено в наказі — нові ТОТ (${result.parsedNew.length})</p>
+    <ul class="items">${itemsHTML(result.parsedNew,'ni')}</ul>
+    <p class="sec-title">Знайдено в наказі — деокуповані (${result.parsedDeocc.length})</p>
+    <ul class="items">${itemsHTML(result.parsedDeocc,'ri')}</ul>
+    ${result.changedT.length?'<p class="sec-title">Оновлено → true ('+result.changedT.length+' нас. пунктів)</p><ul class="items">'+itemsHTML(result.changedT,'ni')+'</ul>':''}
+    ${result.changedF.length?'<p class="sec-title">Оновлено → false ('+result.changedF.length+' нас. пунктів)</p><ul class="items">'+itemsHTML(result.changedF,'ri')+'</ul>':''}
+  `;
+}
+function showError(msg){
+  document.getElementById('divider').style.display='flex';
+  const el=document.getElementById('results');
+  el.style.display='block';
+  el.innerHTML=`<div class="res-head"><div class="res-ic err"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#c0727a" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6M9 9l6 6"/></svg></div><div><div class="res-title">Помилка</div></div></div><div class="err-box">${msg}</div>`;
+}
+</script>
+</body>
+</html>
